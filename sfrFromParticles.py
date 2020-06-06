@@ -8,6 +8,7 @@
 
 from yt.mods import *
 import matplotlib.pyplot as plt
+import pdb
 
 def CenOstrikerKernel(x):
     ''' Here x is the current time minus the formation time normalized by the dynamical time'''
@@ -52,9 +53,9 @@ def sfrFromParticles(pf,data,theParticles,minDynamicalTime=0,times=None,kernel=C
         secondaryFilter = np.ones(np.sum(theParticles),dtype=bool) # A secondary filter which will include all particles.
 
     # Collect relevant pieces of data for each particle
-    creationTime = data['creation_time'][theParticles][secondaryFilter]*pf['years'] # units of years
-    dynamicalTime = data['dynamical_time'][theParticles][secondaryFilter]*pf['years'] # units of years
-    currentTime = pf['InitialTime']*pf['years']  
+    creationTime = (data['creation_time'][theParticles][secondaryFilter]).to('yr') # units of years
+    dynamicalTime = (data['dynamical_time'][theParticles][secondaryFilter]).to('yr') # units of years
+    currentTime = (pf.current_time).to('yr')
     
     # The following line simply enforces dynamicalTime >= minDynamicalTime, the former being taken from the simulation
     # output, and the latter an optional keyword to this function. Note that (at least some) Enzo SF/feedback prescriptions

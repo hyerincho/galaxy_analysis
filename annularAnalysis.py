@@ -7,11 +7,15 @@
 # Hyerin Cho
 
 from yt.mods import *
+from yt import units
+from yt import YTArray
 import matplotlib.pyplot as plt
 from sfrFromParticles import *
+import pdb
+from yt.units import G
 
    
-G=6.67384e-8
+#G=6.67384e-8
 gPerMsun = 1.9891e33
 cmperpc = 3.08567758e18
 cmperkpc = cmperpc*1000
@@ -84,49 +88,49 @@ class annularAnalysis:
                         time-consuming part of the code, so if you don't care about mass loading factors, pass in a short array.'''
         
         #  Save the inputs for later use
-        self.inner = inner
-        self.outer = outer
+        self.inner = inner*units.kpc
+        self.outer = outer*units.kpc
         self.Nsteps = Nsteps
-        self.height = height
+        self.height = height*units.kpc
         self.center = center
         self.fluxHeights = fluxHeights
         
         # Set up arrays to store the quantities we're going to compute.
-        self.r=np.zeros(Nsteps) # radii of boundaries between annuli (kpc)
-        self.spMassEnclosed=np.zeros(Nsteps) # mass enclosed in a sphere of radius r[i] (Msun)
-        self.cylMassEnclosed=np.zeros(Nsteps) # mass enclosed in a cylinder of radius r[i] and half-height self.height (Msun)
-        self.spVcirc=np.zeros(Nsteps) # circular velocity calculated from spherical mass enclosed (cm/s)
-        self.annMass=np.zeros(Nsteps) # mass in an annulus (Msun)
-        self.annArea=np.zeros(Nsteps) # area of an annulus (kpc^2)
-        self.col=np.zeros(Nsteps) # column density in an annulus (Msun/pc^2)
-        self.colGas=np.zeros(Nsteps) # column density of gas in an annulus (Msun/pc^2)
-        self.colSt=np.zeros(Nsteps) # column density of stars in an annulus (Msun/pc^2)
-        self.colDM=np.zeros(Nsteps) # column density in dark matter in an annulus (Msun/pc^2)
-        self.sigR=np.zeros(Nsteps) # non-thermal velocity dispersion of gas along cylindrical rHat in a given radius (cm/s)
-        self.sigPhi=np.zeros(Nsteps) # same but along cylindrical thetaHat (cm/s)
-        self.sigZ=np.zeros(Nsteps) # same but along zHat (cm/s)
-        self.sigStR=np.zeros(Nsteps) # The next three are the same as those above, but for star particles.
-        self.sigStPhi=np.zeros(Nsteps)
-        self.sigStZ=np.zeros(Nsteps)
-        self.vR=np.zeros(Nsteps) # The average velocity of gas in cylindrical rHat in the annulus (cm/s)
-        self.vPhi=np.zeros(Nsteps) # Same but along cylindrical thetaHat (cm/s)
-        self.vZ=np.zeros(Nsteps) # Same but along zHat (cm/s)
-        self.vStR=np.zeros(Nsteps) # The next three are the same, except using star particles.
-        self.vStPhi=np.zeros(Nsteps)
-        self.vStZ=np.zeros(Nsteps)
+        self.r=YTArray(np.zeros(Nsteps),'kpc') # radii of boundaries between annuli (kpc)
+        self.spMassEnclosed=YTArray(np.zeros(Nsteps),'Msun') # mass enclosed in a sphere of radius r[i] (Msun)
+        self.cylMassEnclosed=YTArray(np.zeros(Nsteps),'Msun') # mass enclosed in a cylinder of radius r[i] and half-height self.height (Msun)
+        self.spVcirc=YTArray(np.zeros(Nsteps),'cm/s') # circular velocity calculated from spherical mass enclosed (cm/s)
+        self.annMass=YTArray(np.zeros(Nsteps),'Msun') # mass in an annulus (Msun)
+        self.annArea=YTArray(np.zeros(Nsteps),'kpc**2') # area of an annulus (kpc^2)
+        self.col=YTArray(np.zeros(Nsteps),'Msun/pc**2') # column density in an annulus (Msun/pc^2)
+        self.colGas=YTArray(np.zeros(Nsteps),'Msun/pc**2') # column density of gas in an annulus (Msun/pc^2)
+        self.colSt=YTArray(np.zeros(Nsteps),'Msun/pc**2') # column density of stars in an annulus (Msun/pc^2)
+        self.colDM=YTArray(np.zeros(Nsteps),'Msun/pc**2') # column density in dark matter in an annulus (Msun/pc^2)
+        self.sigR=YTArray(np.zeros(Nsteps),'cm/s') # non-thermal velocity dispersion of gas along cylindrical rHat in a given radius (cm/s)
+        self.sigPhi=YTArray(np.zeros(Nsteps),'cm/s') # same but along cylindrical thetaHat (cm/s)
+        self.sigZ=YTArray(np.zeros(Nsteps),'cm/s') # same but along zHat (cm/s)
+        self.sigStR=YTArray(np.zeros(Nsteps),'cm/s') # The next three are the same as those above, but for star particles.
+        self.sigStPhi=YTArray(np.zeros(Nsteps),'cm/s')
+        self.sigStZ=YTArray(np.zeros(Nsteps),'cm/s')
+        self.vR=YTArray(np.zeros(Nsteps),'cm/s') # The average velocity of gas in cylindrical rHat in the annulus (cm/s)
+        self.vPhi=YTArray(np.zeros(Nsteps),'cm/s') # Same but along cylindrical thetaHat (cm/s)
+        self.vZ=YTArray(np.zeros(Nsteps),'cm/s') # Same but along zHat (cm/s)
+        self.vStR=YTArray(np.zeros(Nsteps),'cm/s') # The next three are the same, except using star particles.
+        self.vStPhi=YTArray(np.zeros(Nsteps),'cm/s')
+        self.vStZ=YTArray(np.zeros(Nsteps),'cm/s')
         self.beta=np.zeros(Nsteps) # an estimate of the powerlaw slope of the rotation curve dln v_phi / dln r (dimensionless)
         self.QWS=np.zeros(Nsteps) # the Wang-Silk estimate of 2-component axisymmetric stability (dimensionless)
         self.QRW=np.zeros(Nsteps) # the Romeo-Wiegert estimate of the same (dimensionless)
         self.Qgas=np.zeros(Nsteps) # Q for the gas only (dimensionless)
         self.Qst=np.zeros(Nsteps) # Q for the stars only (dimensionless)
-        self.hGas=np.zeros(Nsteps) # The mass-weighted standard deviation of gas height. Taken to be an estimate of the scale height (kpc)
-        self.hStars=np.zeros(Nsteps) # same for the stars
+        self.hGas=YTArray(np.zeros(Nsteps),'kpc') # The mass-weighted standard deviation of gas height. Taken to be an estimate of the scale height (kpc)
+        self.hStars=YTArray(np.zeros(Nsteps),'kpc') # same for the stars
         self.Nstars=np.zeros(Nsteps) # Number of new star particles
         self.Ngas = np.zeros(Nsteps) # Number of resolution elements
-        self.spMassDM=np.zeros(Nsteps) # Mass contained in DM in sphere of radius r[i] (Msun)
-        self.spMassSt=np.zeros(Nsteps) # same for star particles
-        self.spMassGas=np.zeros(Nsteps) # same for gas
-        self.sigTh=np.zeros(Nsteps) # thermal velocity dispersion (cm/s)
+        self.spMassDM=YTArray(np.zeros(Nsteps),'Msun') # Mass contained in DM in sphere of radius r[i] (Msun)
+        self.spMassSt=YTArray(np.zeros(Nsteps),'Msun') # same for star particles
+        self.spMassGas=YTArray(np.zeros(Nsteps),'Msun') # same for gas
+        self.sigTh=YTArray(np.zeros(Nsteps),'cm/s') # thermal velocity dispersion (cm/s)
         self.tOrb = np.zeros(Nsteps) # orbital time (yrs)
         self.Z = np.zeros(Nsteps) # metallicity of gas
         self.widthZ=np.zeros(Nsteps) # standard deviation of gas metallicity
@@ -145,7 +149,7 @@ class annularAnalysis:
         self.cylUpFluxes = np.zeros((Nsteps,10)) # upward mass flux through the annulus
         self.cylDownFluxes = np.zeros((Nsteps,10)) # downward mass flux through the annulus
         
-    def run(self, pf, temperatureCut=False):
+    def run(self, pf, temperatureCut=False, rlogscale=True):
         '''
         Actually run the analysis. 
         pf is the parameter file. This is an argument here rather than in the initializer because 
@@ -168,34 +172,44 @@ class annularAnalysis:
         for i in range(self.Nsteps):
             print("Starting analysis for disk i=",i) # tell the user what we're up to
             
-            self.r[i] = self.inner + float(i)*self.outer/float(self.Nsteps-1)
+            if rlogscale:
+                # logscale
+                self.r[i] = np.exp(np.log(self.inner) + float(i)*np.log(self.outer)/float(self.Nsteps-1))*units.kpc
+            else:
+                self.r[i] = (self.inner + float(i)*self.outer/float(self.Nsteps-1)).to('kpc')
+            print(self.r[i])
             
             # Find particles in this spherical shell. 
-            sphere=pf.h.sphere(self.center, (self.r[i],'kpc'))
+            sphere=pf.h.sphere(self.center, (self.r[i]))
             dmp = sphere["particle_type"]==1 # Dark matter
             stp = np.logical_or(sphere["particle_type"]==2, sphere["particle_type"]==4) # Stars
+            bhp = sphere["particle_type"]==8 # MBH
 
             # Add up mass
-            self.spMassEnclosed[i] = sphere.quantities["TotalMass"]()
-            self.spMassDM[i] = np.sum(sphere["ParticleMassMsun"][dmp])
-            self.spMassSt[i] = np.sum(sphere["ParticleMassMsun"][stp])
-            self.spMassGas[i] = np.sum(sphere["CellMassMsun"])
+            self.spMassEnclosed[i] = (np.sum(sphere.quantities["TotalMass"]())).to('Msun')
+            self.spMassDM[i] = (np.sum(sphere["particle_mass"][dmp])).to('Msun')
+            self.spMassSt[i] = (np.sum(sphere["particle_mass"][stp])).to('Msun')
+            # TODO! Add Blackhole mass too
+            self.spMassGas[i] = (np.sum(sphere["cell_mass"])).to('Msun')
             
             # A couple quantities derived from the spherical mass enclosed:
-            self.spVcirc[i] = np.sqrt(G*self.spMassEnclosed[i]*gPerMsun/(self.r[i]*cmperkpc)) # v^2/r = GM/r^2 -- cm/s
-            self.tOrb[i] = self.r[i]*cmperkpc/(speryear*self.spVcirc[i]) # years
+            self.spVcirc[i] = (np.sqrt(G*self.spMassEnclosed[i]/(self.r[i]))).to('cm/s') # v^2/r = GM/r^2 -- cm/s
+            self.tOrb[i] = (self.r[i]/(self.spVcirc[i])).to('yr') # years
             
             # Set up a series of concentric disks. disks is used for most of the analysis, but we need
             # tall disks, i.e. ones with larger heights, to measure the mass flux at various heights.
-            disks[i] = pf.h.disk(self.center,[0,0,1],self.r[i]/pf['kpc'],self.height/pf['kpc'])
-            tallDisks[i] = pf.h.disk(self.center,[0,0,1],self.r[i]/pf['kpc'],max(self.fluxHeights)*1.1/pf['kpc'])
-            self.cylMassEnclosed[i] = disks[i].quantities["TotalMass"]()
+            disks[i] = pf.h.disk(self.center,[0,0,1],(self.r[i]),(self.height))
+            tallDisks[i] = pf.h.disk(self.center,[0,0,1],(self.r[i]),\
+                                     (max(self.fluxHeights)*1.1,'kpc'))
+            self.cylMassEnclosed[i] = np.sum(disks[i].quantities["TotalMass"]())
 
 #            coldDisks[i] = disk.cut_region( ["grid['Temperature'] < 10.0**5"] )
             if(i != 0):
                 # Identify the annulus as this cold disk minus the previous cold disk
-                annuli[i] = pf.h.boolean([disks[i], "NOT", disks[i-1]])
-                tallAnnuli[i] = pf.h.boolean([tallDisks[i], "NOT", tallDisks[i-1]])
+                #annuli[i] = pf.h.boolean([disks[i], "NOT", disks[i-1]])
+                annuli[i] = disks[i] - disks[i-1]
+                #tallAnnuli[i] = pf.h.boolean([tallDisks[i], "NOT", tallDisks[i-1]])
+                tallAnnuli[i] = tallDisks[i] - tallDisks[i-1]
                 # Identify particles in this annulus.
             else:
                 # When i=0, we're dealing with a disk, not an annulus.
@@ -211,20 +225,22 @@ class annularAnalysis:
                 
             # Compute the flux through the tops and bottoms of annuli of various heights.
             conv = 6.30321217e25 # conversion factor for g/s -> Msun/yr
+            # TODO: Hyerin- I don't need this so skipping the check for now,
+            # but should check this at some point
             for j, h in enumerate(self.fluxHeights):
-                self.cylUpFluxes[i,j]=( tallAnnuli[i].calculate_isocontour_flux('z', self.center[2]+h/pf['kpc'], 
-                                                'x-velocity', 'y-velocity', 'z-velocity', 'Density')*pf['cm']**2.0/conv )
-                self.cylDownFluxes[i,j]= ( -1.0 * tallAnnuli[i].calculate_isocontour_flux('z', self.center[2]-h/pf['kpc'],
-                                                       'x-velocity', 'y-velocity', 'z-velocity', 'Density')*pf['cm']**2.0/conv )
+                self.cylUpFluxes[i,j]=(tallAnnuli[i].calculate_isocontour_flux('z',\
+                                    self.center[2]*pf.length_unit+h*units.kpc, 'x-velocity', 'y-velocity', 'z-velocity', 'Density')*units.cm**2.0/conv )
+                self.cylDownFluxes[i,j]= ( -1.0 * tallAnnuli[i].calculate_isocontour_flux('z',\
+                                          self.center[2]*pf.length_unit-h*units.kpc,'x-velocity','y-velocity','z-velocity', 'Density')*units.cm**2.0/conv )
                
             # Get the particle positions in kpc
-            particleX = (annuli[i]["particle_position_x"] - self.center[0])*pf['kpc']
-            particleY = (annuli[i]["particle_position_y"] - self.center[1])*pf['kpc']
+            particleX = (annuli[i]["particle_position_x"] - self.center[0]*pf.length_unit).to('kpc')
+            particleY = (annuli[i]["particle_position_y"] - self.center[1]*pf.length_unit).to('kpc')
             particleR = np.sqrt(np.power(particleX,2.0) + np.power(particleY,2.0))
-            particleZ = (annuli[i]["particle_position_z"] - self.center[2])*pf['kpc']
-                
-            annularVolume = np.sum(coldAnnuli[i]['CellVolume'])/cmperkpc**3  # cubic kpc
-            supersetAnnularVolume = np.sum(annuli[i]['CellVolume'])/cmperkpc**3
+            particleZ = (annuli[i]["particle_position_z"] - self.center[2]*pf.length_unit).to('kpc')
+ 
+            annularVolume = (np.sum(coldAnnuli[i]['cell_volume'])).to('kpc**3')  # cubic kpc
+            supersetAnnularVolume = (np.sum(annuli[i]['cell_volume'])).to('kpc**3')
             assert annularVolume / supersetAnnularVolume <= 1.0
             # Check the ratio of the volume in coldAnnuli compared to annuli. This should be 1 without temperatureCut
             # and less than 1 with it.
@@ -237,25 +253,24 @@ class annularAnalysis:
             #    self.annArea[i] = np.pi * (self.r[i]**2.0 - self.r[i-1]**2.0) # sq kpc
             #else:
             #    self.annArea[i] = np.pi * self.r[i]**2.0 # square kpc
-            
-            self.annArea[i] = annularVolume/(2.0*self.height) # square kpc
+            self.annArea[i] = (annularVolume/(2.0*self.height)).to('kpc**2') # square kpc
 
             # Total gas mass. I would have naively expect this to include particle mass, but I /think/ that since
             # particles have no information on 'Temperature', the coldAnnuli refer only to the gas. Any assignment
             # of particles to these annuli has to be done by hand, as with the logic on the 'particles' array above.
-            self.annMass[i] = coldAnnuli[i].quantities["TotalMass"]() # solar masses
-            self.col[i] = self.annMass[i]/(self.annArea[i]*1.0e6) # Msun/pc^2 
-            self.colGas[i] = coldAnnuli[i].quantities["TotalQuantity"]("CellMassMsun") / (self.annArea[i]*1.0e6)
+            self.annMass[i] = (np.sum(coldAnnuli[i].quantities["TotalMass"]())).to('Msun') # solar masses
+            self.col[i] = (self.annMass[i]/(self.annArea[i])).to('Msun/pc**2') # Msun/pc^2 
+            self.colGas[i] = ((coldAnnuli[i].quantities["TotalQuantity"]("cell_mass"))/(self.annArea[i])).to('Msun/pc**2') 
             
             # Split up the particles which are in this annulus into stars and DM. 
             star_particles = np.logical_or( annuli[i]["particle_type"]==2, annuli[i]["particle_type"]==4 )
-            new_star_particles = annuli[i]["particle_type"]==4 
+            new_star_particles = np.logical_and(annuli[i]["particle_type"]==2, annuli[i]["creation_time"]>0)
             dm_particles = annuli[i]["particle_type"]==1
 
             self.Nstars[i]=np.sum(star_particles)
             self.Ngas[i]=len(annuli[i]["x-velocity"])
-            self.colSt[i] = np.sum(annuli[i]["ParticleMassMsun"][star_particles]) / (self.annArea[i]*1.0e6)
-            self.colDM[i] = np.sum(annuli[i]["ParticleMassMsun"][dm_particles]) / (self.annArea[i]*1.0e6)
+            self.colSt[i] = (np.sum(annuli[i]["particle_mass"][star_particles]) / (self.annArea[i])).to('Msun/pc**2')
+            self.colDM[i] = (np.sum(annuli[i]["particle_mass"][dm_particles]) / (self.annArea[i])).to('Msun/pc**2')
             
             # Manually compute the radial and tangential components of the velocity for the star particles.
             stX = particleX[star_particles]
@@ -273,45 +288,43 @@ class annularAnalysis:
             stVz = annuli[i]["particle_velocity_z"][star_particles]
             # Mass for star particles and for newly-formed star particles. These arrays are used when computing 
             # various moments below.
-            stM =  annuli[i]["ParticleMassMsun"][star_particles]
-            newStM = annuli[i]["ParticleMassMsun"][new_star_particles]
+            stM =  annuli[i]["particle_mass"][star_particles]
+            newStM = annuli[i]["particle_mass"][new_star_particles]
             
             # Compute moments of the velocity, positions, and metals for stars
             stTotalMass = np.sum(stM)
             newStTotalMass = np.sum(newStM)
             # Bulk velocity:
-            self.vStR[i] = np.sum(stM*stVr)/stTotalMass
-            self.vStPhi[i] = np.sum(stM*stVt)/stTotalMass
-            self.vStZ[i] = np.sum(stM*stVz)/stTotalMass
+            self.vStR[i] = (np.sum(stM*stVr)/stTotalMass).to('cm/s')
+            self.vStPhi[i] = (np.sum(stM*stVt)/stTotalMass).to('cm/s')
+            self.vStZ[i] = (np.sum(stM*stVz)/stTotalMass).to('cm/s')
             # Velocity dispersion
-            self.sigStR[i] = np.sqrt(np.sum(stM*np.power(stVr-self.vStR[i],2.0))/stTotalMass)
-            self.sigStPhi[i] = np.sqrt(np.sum(stM*np.power(stVt-self.vStPhi[i],2.0))/stTotalMass)
-            self.sigStZ[i] = np.sqrt(np.sum(stM*np.power(stVz-self.vStZ[i],2.0))/stTotalMass)
+            self.sigStR[i] = (np.sqrt(np.sum(stM*np.power(stVr-self.vStR[i],2.0))/stTotalMass)).to('cm/s')
+            self.sigStPhi[i] = (np.sqrt(np.sum(stM*np.power(stVt-self.vStPhi[i],2.0))/stTotalMass)).to('cm/s')
+            self.sigStZ[i] = (np.sqrt(np.sum(stM*np.power(stVz-self.vStZ[i],2.0))/stTotalMass)).to('cm/s')
             # Metallicity:
             self.stZ[i] = np.sum(newStM * annuli[i]["metallicity_fraction"][new_star_particles])/newStTotalMass
             self.stWidthZ[i] = np.sqrt(np.sum(newStM*np.power(annuli[i]["metallicity_fraction"][new_star_particles] - self.stZ[i],2.0))/newStTotalMass)
             # vertical postion
             zStars = np.sum(stM * particleZ[star_particles])/stTotalMass
-            self.hStars[i] = np.sqrt(np.sum(stM * np.power(zStars-particleZ[star_particles],2.0))/stTotalMass) # kpc
+            self.hStars[i] = (np.sqrt(np.sum(stM * np.power(zStars-particleZ[star_particles],2.0))/stTotalMass)).to('kpc') # kpc
             # Stellar ages
-            self.stAge[i] = np.sum(newStM * pf['years']*(pf['InitialTime']-annuli[i]['creation_time'][new_star_particles]))/newStTotalMass
+            self.stAge[i] = np.sum(newStM * (pf.current_time-annuli[i]['creation_time'][new_star_particles]).to('yr'))/newStTotalMass
             self.stAgeSpread[i] = np.sqrt(np.sum(newStM * np.power( \
-                                    pf['years']*(pf['InitialTime']-annuli[i]['creation_time'][new_star_particles]),2.0))/newStTotalMass)
+                                    (pf.current_time-annuli[i]['creation_time'][new_star_particles]).to('yr'),2.0))/newStTotalMass)
 
             # ... and for gas
-            self.sigR[i],self.vR[i] = coldAnnuli[i].quantities["WeightedVariance"]("cyl_RadialVelocity","CellMassMsun") # cm/s
-            self.sigPhi[i],self.vPhi[i] = coldAnnuli[i].quantities["WeightedVariance"]("TangentialVelocity","CellMassMsun") #cm/s
-            self.sigZ[i],self.vZ[i] = coldAnnuli[i].quantities["WeightedVariance"]("z-velocity","CellMassMsun") # cm/s
-            self.hGas[i],self.zGas = coldAnnuli[i].quantities["WeightedVariance"]("z","CellMassMsun") # code units
-            self.hGas[i]*=pf['kpc']
-            self.zGas*=pf['kpc']
-            self.widthZ[i], self.Z[i] = coldAnnuli[i].quantities["WeightedVariance"]("Metal_Fraction","CellMassMsun")
+            self.sigR[i],self.vR[i] = (coldAnnuli[i].quantities["WeightedVariance"]("cylindrical_radial_velocity","cell_mass"))*units.cm/units.s#.to('cm/s') # cm/s
+            self.sigPhi[i],self.vPhi[i] = (coldAnnuli[i].quantities["WeightedVariance"]("cylindrical_tangential_velocity","cell_mass"))*units.cm/units.s#.to('cm/s') #cm/s
+            self.sigZ[i],self.vZ[i] = ((coldAnnuli[i].quantities["WeightedVariance"]("z-velocity","cell_mass"))*pf.velocity_unit).to('cm/s') # cm/s
+            self.hGas[i],self.zGas = ((coldAnnuli[i].quantities["WeightedVariance"]("z","cell_mass"))*units.cm).to('kpc') # *units.kpc#kpc
+            self.widthZ[i], self.Z[i] = (coldAnnuli[i].quantities["WeightedVariance"]("metallicity","cell_mass")).to('') # dimensionless
         
             # Compute the mass-weighted thermal velocity dispersion.
-            soundSpeeds = coldAnnuli[i]["SoundSpeed"]
-            masses = coldAnnuli[i]["CellMassMsun"]
+            soundSpeeds = coldAnnuli[i]["sound_speed"]
+            masses = (coldAnnuli[i]["cell_mass"]).to('Msun')
             cylMass = np.sum(masses)
-            self.sigTh[i] = np.sum(soundSpeeds*masses)/cylMass
+            self.sigTh[i] = (np.sum(soundSpeeds*masses)/cylMass).to('cm/s')
             
             # Compute the logarithmic derivative of the circular velocity, as found from the mass contained in spherical shells
             if(i!=0):
@@ -330,10 +343,10 @@ class annularAnalysis:
             Tst = 0.8 + 0.7 * self.sigStZ[i]/self.sigStR[i]
             
             # ... including the Q of individual disk components
-            self.Qst[i] = self.sigStR[i] * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i] / \
-                (self.r[i] * cmperkpc * np.pi * G * self.colSt[i]*gPerMsun/cmperpc**2.0)
-            self.Qgas[i] = totSigR * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i]/ \
-                (self.r[i] * cmperkpc * np.pi * G * self.colGas[i]*gPerMsun/cmperpc**2.0)
+            self.Qst[i] = (self.sigStR[i] * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i] / \
+                (self.r[i] * np.pi * G * self.colSt[i])).to('')
+            self.Qgas[i] = (totSigR * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i]/ \
+                (self.r[i] * np.pi * G * self.colGas[i])).to('')
             
             self.QWS[i] = 1.0/ (1.0/self.Qst[i] + 1.0/self.Qgas[i]) # The Wang-Silk approximation
             # The Romeo-Wiegert approximation:
@@ -342,7 +355,8 @@ class annularAnalysis:
             else:
                 self.QRW[i] = 1.0 / ( 1.0/(self.Qst[i]*Tst) + W/(self.Qgas[i]*Tg))
                 
-            self.logDensityWidth[i], self.avgLogDensity[i] = coldAnnuli[i].quantities["WeightedVariance"]("logDensity","CellMassMsun")
+            #self.logDensityWidth[i], self.avgLogDensity[i] = coldAnnuli[i].quantities["WeightedVariance"]("logDensity","cell_mass")
+            self.logDensityWidth[i], self.avgLogDensity[i] = np.log10(((coldAnnuli[i].quantities.weighted_variance("Density","cell_mass"))*pf.mass_unit/pf.length_unit**3).d)
 
             # Various estimates of the freefall or dynamical time.
             self.tff[i] = np.sqrt(3*np.pi/32.0)/np.sqrt(G*cylMass*gPerMsun/(annularVolume*cmperkpc**3)) # seconds
@@ -358,10 +372,11 @@ class annularAnalysis:
 
             # Finally, check the present star formation rate in each annulus.
             # Something fancier could be done here, e.g. looking at the average rate over some time in the past.
-            times,sfrs = sfrFromParticles(pf, annuli[i], new_star_particles, 
-                                          times = [pf['InitialTime']*pf['years']])
-            self.sfrs[i] = sfrs[0] # Msun/yr
-            self.colSFRs[i] = self.sfrs[i] / (1.0e6 * self.annArea[i]) # solar masses / yr / pc^2
+            if 0:
+                times,sfrs = sfrFromParticles(pf, annuli[i], new_star_particles, \
+                                          times = [(pf.current_time).to('yr')])
+                self.sfrs[i] = sfrs[0] # Msun/yr
+                self.colSFRs[i] = self.sfrs[i] / (1.0e6 * self.annArea[i]) # solar masses / yr / pc^2
             
 
         # Done!
@@ -397,7 +412,7 @@ def plotSfGasLaw(annuli, axIn=None, basename="sfGasLaw", filetype="png"):
     ax.legend()
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotTimescales(annuli, axIn=None, basename="timescales", filetype="png"):
+def plotTimescales(annuli, axIn=None, basename="timescales", filetype="png",rlogscale=True):
     fig,ax=axisSwitch(axIn)
     ax.plot(annuli.r,annuli.tff/speryear,ls='-',lw=2,label='from mean density')
     ax.scatter(annuli.r,annuli.tff/speryear)
@@ -412,9 +427,11 @@ def plotTimescales(annuli, axIn=None, basename="timescales", filetype="png"):
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('dynamical times (yrs)')
     ax.legend()
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig, ax, basename, filetype, annuli.pfName)
     
-def plotColumnDensities(annuli, axIn=None, basename="col", filetype="png"):
+def plotColumnDensities(annuli, axIn=None, basename="sigma", filetype="png",rlogscale=True):
     colTot = annuli.colGas+annuli.colSt+annuli.colDM
 
     fig,ax=axisSwitch(axIn)
@@ -423,19 +440,21 @@ def plotColumnDensities(annuli, axIn=None, basename="col", filetype="png"):
     ax.scatter(annuli.r,annuli.colDM,color='r')
     ax.scatter(annuli.r,annuli.col,color='k')
     ax.scatter(annuli.r,colTot,color='k')
-    ax.plot(annuli.r,annuli.colGas,color='b',label='gas')
-    ax.plot(annuli.r,annuli.colSt,color='g',label='stars')
-    ax.plot(annuli.r,annuli.colDM,color='r',label='DM')
-    ax.plot(annuli.r,annuli.col,color='k',label='total')
-    ax.plot(annuli.r,colTot,color='k',ls='--',label='added',lw=3)
+    ax.plot(annuli.r,(annuli.colGas).to('g/cm**2'),color='b',label='gas')
+    ax.plot(annuli.r,(annuli.colSt).to('g/cm**2'),color='g',label='stars')
+    ax.plot(annuli.r,(annuli.colDM).to('g/cm**2'),color='r',label='DM')
+    ax.plot(annuli.r,(annuli.col).to('g/cm**2'),color='k',label='total')
+    ax.plot(annuli.r,(colTot).to('g/cm**2'),color='k',ls='--',label='added',lw=3)
 
     ax.legend()
     ax.set_yscale('log')
     ax.set_xlabel('r (kpc)')
-    ax.set_ylabel('Column Density (Msun per pc sq)')
+    ax.set_ylabel(r'Surface Density $\Sigma$ (g/cm$^2$)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig, ax, basename, filetype, annuli.pfName)
 
-def plotSphericalMasses(annuli, axIn=None, basename="spheres", filetype="png"):
+def plotSphericalMasses(annuli, axIn=None, basename="spheres", filetype="png",rlogscale=True):
     fig,ax=axisSwitch(axIn)
     r = annuli.r 
     spTotalMass = annuli.spMassEnclosed 
@@ -459,9 +478,11 @@ def plotSphericalMasses(annuli, axIn=None, basename="spheres", filetype="png"):
     ax.set_yscale('log')
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Mass contained in spherical shells (Msun)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotVelocityDispersions(annuli, axIn=None, basename="dispersions", filetype="png"):
+def plotVelocityDispersions(annuli, axIn=None, basename="dispersions", filetype="png", rlogscale=True):
     fig,ax=axisSwitch(axIn)
 
     r = annuli.r 
@@ -497,9 +518,11 @@ def plotVelocityDispersions(annuli, axIn=None, basename="dispersions", filetype=
     ax.legend()
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Velocity Dispersion (km/s)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotBulkVelocity(annuli, axIn=None, basename="bulk", filetype="png"):
+def plotBulkVelocity(annuli, axIn=None, basename="bulk", filetype="png",rlogscale=True):
     r = annuli.r 
     vR = annuli.vR 
     vPhi = annuli.vPhi 
@@ -527,9 +550,11 @@ def plotBulkVelocity(annuli, axIn=None, basename="bulk", filetype="png"):
     ax.legend()
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Bulk velocity (km/s)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotRotationCurve(annuli, axIn=None, basename="rotation", filetype="png"):
+def plotRotationCurve(annuli, axIn=None, basename="rotation", filetype="png",rlogscale=True):
     fig,ax=axisSwitch(axIn)
         
     r = annuli.r 
@@ -546,9 +571,11 @@ def plotRotationCurve(annuli, axIn=None, basename="rotation", filetype="png"):
     ax.legend()
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Rotational Velocity (km/s)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotStability(annuli, axIn=None, basename="toomre", filetype="png"):
+def plotStability(annuli, axIn=None, basename="toomre", filetype="png",rlogscale=True):
     fig,ax=axisSwitch(axIn)
     r = annuli.r[1:] 
     QRW = annuli.QRW[1:] 
@@ -569,10 +596,12 @@ def plotStability(annuli, axIn=None, basename="toomre", filetype="png"):
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Q')
     ax.set_yscale('log')
+    if rlogscale:
+        ax.set_xscale('log')
     ax.legend()
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotFluxes(annuli, axIn=None, basename="verticalFlux", filetype="png"):
+def plotFluxes(annuli, axIn=None, basename="verticalFlux", filetype="png",rlogscale=True):
     fig,ax = axisSwitch(axIn)
     for j,h in enumerate(annuli.fluxHeights):
         colorPart = float(j+5)/float(len(annuli.fluxHeights)+5)
@@ -584,9 +613,11 @@ def plotFluxes(annuli, axIn=None, basename="verticalFlux", filetype="png"):
     ax.legend()
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Vertical flux (Msun/yr/sq kpc)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotScaleheights(annuli, axIn=None, basename="scaleheights", filetype="png"):
+def plotScaleheights(annuli, axIn=None, basename="scaleheights", filetype="png",rlogscale=True):
     fig,ax = axisSwitch(axIn)
     ax.plot(annuli.r, annuli.hGas, color='blue', label='gas')
     ax.scatter(annuli.r, annuli.hGas, color='blue')
@@ -596,9 +627,11 @@ def plotScaleheights(annuli, axIn=None, basename="scaleheights", filetype="png")
     ax.legend()
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Scaleheight (kpc)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotNResolutionElements(annuli, axIn=None, basename="nResElements", filetype="png"):
+def plotNResolutionElements(annuli, axIn=None, basename="nResElements", filetype="png",rlogscale=True):
     fig,ax = axisSwitch(axIn)
     ax.plot(annuli.r, annuli.Ngas, color='blue', label='gas')
     ax.scatter(annuli.r, annuli.Ngas, color='blue')
@@ -609,9 +642,11 @@ def plotNResolutionElements(annuli, axIn=None, basename="nResElements", filetype
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Number of Resolution Elements')
     ax.set_yscale('log')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotMetallicity(annuli, axIn=None, basename='metallicity', filetype='png'):
+def plotMetallicity(annuli, axIn=None, basename='metallicity', filetype='png',rlogscale=True):
     fig,ax = axisSwitch(axIn)
     ax.plot(annuli.r, annuli.Z, color='blue', label='gas')
     ax.plot(annuli.r, annuli.Z+annuli.widthZ, color='blue', ls='--')
@@ -626,9 +661,11 @@ def plotMetallicity(annuli, axIn=None, basename='metallicity', filetype='png'):
     ax.set_yscale('log')
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Metallicity')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotStellarAges(annuli, axIn=None, basename='stellarAges', filetype='png'):
+def plotStellarAges(annuli, axIn=None, basename='stellarAges', filetype='png',rlogscale=True):
     fig,ax = axisSwitch(axIn)
     ax.plot(annuli.r, annuli.stAge, color='blue', label='gas')
     ax.plot(annuli.r, annuli.stAge+annuli.stAgeSpread, color='blue', ls='--')
@@ -637,9 +674,11 @@ def plotStellarAges(annuli, axIn=None, basename='stellarAges', filetype='png'):
 
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Stellar Ages (yrs)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
-def plotDensityDistribution(annuli, axIn=None, basename='densDist', filetype='png'):
+def plotDensityDistribution(annuli, axIn=None, basename='densDist', filetype='png',rlogscale=True):
     fig,ax = axisSwitch(axIn)
     ax.plot(annuli.r, annuli.avgLogDensity, color='blue', label='gas')
     ax.plot(annuli.r, annuli.avgLogDensity+annuli.logDensityWidth, color='blue', ls='--')
@@ -648,21 +687,28 @@ def plotDensityDistribution(annuli, axIn=None, basename='densDist', filetype='pn
 
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Log Density (g/cc)')
+    if rlogscale:
+        ax.set_xscale('log')
     return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
 
 # A few convenience functions for quick looks at the results.
+#plotFunctions = [plotStability, plotRotationCurve, plotBulkVelocity, 
+#                 plotVelocityDispersions, plotSphericalMasses,
+#                 plotColumnDensities, plotTimescales, plotSfGasLaw, 
+#                 plotSfLaw, plotFluxes, plotScaleheights, plotNResolutionElements,
+#                 plotMetallicity, plotStellarAges, plotDensityDistribution ]
 plotFunctions = [plotStability, plotRotationCurve, plotBulkVelocity, 
                  plotVelocityDispersions, plotSphericalMasses,
-                 plotColumnDensities, plotTimescales, plotSfGasLaw, 
-                 plotSfLaw, plotFluxes, plotScaleheights, plotNResolutionElements,
+                 plotColumnDensities,  
+                 plotScaleheights, plotNResolutionElements,
                  plotMetallicity, plotStellarAges, plotDensityDistribution ]
 def showAllPlots(annuli):
     for fn in plotFunctions:
         fn(annuli,filetype='screen')
-def saveAllPlots(annuli):
+def saveAllPlots(annuli,rlogscale=True):
     for fn in plotFunctions:
-        fn(annuli,filetype='png')   
+        fn(annuli,filetype='png',rlogscale=rlogscale)   
 
 
 if __name__ == '__main__':
@@ -670,8 +716,22 @@ if __name__ == '__main__':
     # A use case
 
     #pf = load('/pfs/jforbes/run-enzo-dev-jforbes/dwarf_nf35/DD0172/DD0172')
-    pf = load('/data/hcho/MyAgoraGalaxy/run_200130_640pc/DD0010/DD0010')
+    #pf = load('/data/hcho/MyAgoraGalaxy/run_200130_640pc/DD0010/DD0010')
+    pf = load('/data/hcho/HighAgora/run_200528_lv16_test/DD16_0009/DD0009')
+    #pf = load('/data/hcho/HighAgora/run_200520_lv12norad/DD0061/DD0061')
     fluxHeights = [1.0/1000.0 * 8**i for i in range(1)]#(4)] # 1, 8, 64, 512 pc
+
+    # determine BH position
+    if 1:
+        ad = pf.all_data()
+        type_= np.array(ad['particle_type'])
+        bhpos = []
+        for pos in ['x','y','z']:
+            bhpos +=\
+            [((ad['particle_position_'+pos][np.where(type_==8)[0]][0]).to('code_length')).d]
+        center = bhpos
+    else:
+        center = [0.5,0.5,0.5]
 
     # Look at annuli between 30 pc and 600 pc
     # Use 20 annuli
@@ -679,10 +739,13 @@ if __name__ == '__main__':
     # Centered at [.5,.5,.5] in code units
     # Look at vertical fluxes at the heights allocated above.
     #annuli = annularAnalysis(.03, 0.6, 20, 0.1, [.5,.5,.5],fluxHeights) # set up
-    annuli = annularAnalysis(1.2, 35., 20, 4., [.5,.5,.5],fluxHeights) # set up
-    annuli.run(pf) # actually run the analysis
+    #annuli = annularAnalysis(1.2, 35., 20, 4., [.5,.5,.5],fluxHeights) # set up
+    annuli = annularAnalysis(0.01, 3.2, 20, 4., bhpos,fluxHeights) # set up
+    #annuli = annularAnalysis(0.01, 35., 20, 4., [.5,.5,.5],fluxHeights) # set up
+    rlogscale = False
+    annuli.run(pf,rlogscale=rlogscale) # actually run the analysis
 
-    PlotStability(annuli,filetype='png')
+    #plotStability(annuli,filetype='png',rlogscale=rlogscale)
 
-    #saveAllPlots(annuli) # save the plots as <pfName>_<plotName>.png
+    saveAllPlots(annuli,rlogscale) # save the plots as <pfName>_<plotName>.png
 
