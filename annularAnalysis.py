@@ -123,7 +123,10 @@ class annularAnalysis:
         self.QRW=np.zeros(Nsteps) # the Romeo-Wiegert estimate of the same (dimensionless)
         self.Qgas=np.zeros(Nsteps) # Q for the gas only (dimensionless)
         self.Qst=np.zeros(Nsteps) # Q for the stars only (dimensionless)
+        self.QHC=np.zeros(Nsteps) # Q added by Hyerin, following Goodman(2003) (dimensionless)
+        self.QHC2=np.zeros(Nsteps) # Q added by Hyerin, testing (dimensionless)
         self.hGas=YTArray(np.zeros(Nsteps),'kpc') # The mass-weighted standard deviation of gas height. Taken to be an estimate of the scale height (kpc)
+        self.hGas2=YTArray(np.zeros(Nsteps),'kpc') # The mass-weighted standard deviation of gas height. Taken to be an estimate of the scale height (kpc)
         self.hStars=YTArray(np.zeros(Nsteps),'kpc') # same for the stars
         self.Nstars=np.zeros(Nsteps) # Number of new star particles
         self.Ngas = np.zeros(Nsteps) # Number of resolution elements
@@ -141,7 +144,8 @@ class annularAnalysis:
         self.tff = np.zeros(Nsteps) # freefall time -- from mean density in the annular volume(s)
         self.tff2 = np.zeros(Nsteps) # freefall time -- from the mass-weighted mean of the log in the annular volume (s)
         self.tff3 = np.zeros(Nsteps) # freefall time -- from the scale height crossing time (s)
-        self.sfrs = np.zeros(Nsteps) # star formation rate (Msun/yr)
+        self.sfrs = YTArray(np.zeros(Nsteps),'Msun/yr') # star formation rate (Msun/yr)
+        self.sfrs2 = YTArray(np.zeros(Nsteps),'Msun/yr') # star formation rate (Msun/yr)
         self.colSFRs = np.zeros(Nsteps) # star formation column density (Msun/yr/pc^2)
         self.avgLogDensity = np.zeros(Nsteps) # mass-weighted average of the mean of the log of the density (log_10 of g/cm^3)
         self.logDensityWidth = np.zeros(Nsteps) # standard deviation of the above (dex)
@@ -174,9 +178,10 @@ class annularAnalysis:
             
             if rlogscale:
                 # logscale
-                self.r[i] = np.exp(np.log(self.inner) + float(i)*np.log(self.outer)/float(self.Nsteps-1))*units.kpc
+                self.r[i] = np.exp(np.log(self.inner)+\
+                float(i)*(np.log(self.outer)-np.log(self.inner))/float(self.Nsteps-1))*units.kpc
             else:
-                self.r[i] = (self.inner + float(i)*self.outer/float(self.Nsteps-1)).to('kpc')
+                self.r[i] = (self.inner + float(i)*(self.outer-self.inner)/float(self.Nsteps-1)).to('kpc')
             print(self.r[i])
             
             # Find particles in this spherical shell. 
@@ -268,7 +273,7 @@ class annularAnalysis:
             dm_particles = annuli[i]["particle_type"]==1
 
             self.Nstars[i]=np.sum(star_particles)
-            self.Ngas[i]=len(annuli[i]["x-velocity"])
+            self.Ngas[i]=len(annuli[i][("gas","cell_mass")])
             self.colSt[i] = (np.sum(annuli[i]["particle_mass"][star_particles]) / (self.annArea[i])).to('Msun/pc**2')
             self.colDM[i] = (np.sum(annuli[i]["particle_mass"][dm_particles]) / (self.annArea[i])).to('Msun/pc**2')
             
@@ -314,8 +319,6 @@ class annularAnalysis:
                                     (pf.current_time-annuli[i]['creation_time'][new_star_particles]).to('yr'),2.0))/newStTotalMass)
 
             # ... and for gas
-            # TODO! Try the same thing with Gas as Stars and see what's
-            # different
             # TODO! Try relative velocity wrt MBH for both gas and stars
 
             gasX = (annuli[i][("gas","x")] - self.center[0]*pf.length_unit).to('kpc')
@@ -342,6 +345,9 @@ class annularAnalysis:
 
             self.zGas = np.sum(gasM*gasZ)/gasTotalMass
             self.hGas[i] = (np.sqrt(np.sum(gasM*np.power(self.zGas-gasZ,2.0))/gasTotalMass)).to('kpc')
+            # test by Hyerin
+            self.hGas2[i]  = (np.power(self.sigR[i],2.0)/\
+                              (np.pi  * G * self.colGas[i])).to('kpc')
 
             if 0: # velocities are not quite right.
                 temp = coldAnnuli[i].quantities["WeightedVariance"]("cylindrical_radial_velocity","cell_mass")
@@ -387,8 +393,13 @@ class annularAnalysis:
             # ... including the Q of individual disk components
             self.Qst[i] = (self.sigStR[i] * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i] / \
                 (self.r[i] * np.pi * G * self.colSt[i])).to('')
-            # TODO! Try the equation in Goodman (2003)
             self.Qgas[i] = (totSigR * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i]/ \
+                (self.r[i] * np.pi * G * self.colGas[i])).to('')
+            # Q equation in Goodman (2003)
+            self.QHC[i] = (self.sigTh[i]*self.spVcirc[i]/\
+                           (self.r[i]*np.pi*G*self.colGas[i])).to('')
+            # Q equation test
+            self.QHC2[i] = (self.sigR[i] * np.sqrt(2.0*(self.beta[i]+1.0)) * self.spVcirc[i]/ \
                 (self.r[i] * np.pi * G * self.colGas[i])).to('')
             
             self.QWS[i] = 1.0/ (1.0/self.Qst[i] + 1.0/self.Qgas[i]) # The Wang-Silk approximation
@@ -418,11 +429,12 @@ class annularAnalysis:
 
             # Finally, check the present star formation rate in each annulus.
             # Something fancier could be done here, e.g. looking at the average rate over some time in the past.
-            if 0:
-                times,sfrs = sfrFromParticles(pf, annuli[i], new_star_particles, \
+            if 1:
+                times,sfrs,sfrs2 = sfrFromParticles(pf, annuli[i], new_star_particles, \
                                           times = [(pf.current_time).to('yr')])
                 self.sfrs[i] = sfrs[0] # Msun/yr
-                self.colSFRs[i] = self.sfrs[i] / (1.0e6 * self.annArea[i]) # solar masses / yr / pc^2
+                self.sfrs2[i] = sfrs2[0] # Msun/yr
+                self.colSFRs[i] = (self.sfrs[i] / (1.0e6 * self.annArea[i])).to('Msun/yr/pc**2') # solar masses / yr / pc^2
             
 
         # Done!
@@ -430,6 +442,19 @@ class annularAnalysis:
 
  
 # Now we have a bunch of convenience functions for plotting the quantities we just extracted.
+
+def plotSf(annuli, axIn=None, basename="sfLaw", filetype="png",rlogscale=True):
+    # Added by HC. SFR as a function of radius
+    fig,ax=axisSwitch(axIn)
+    ax.plot(annuli.r,annuli.sfrs,color='k',lw=2,label='SFR')
+    ax.plot(annuli.r,annuli.sfrs2,ls='-',color='gray',lw=2,label='SFR_HC')
+    if rlogscale:
+        ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlabel('r (kpc)')
+    ax.set_ylabel(r'SFR(<R) $M_\odot {\rm yr}^{-1}$')
+    ax.legend()
+    return returnSwitch(fig,ax,basename,filetype,annuli.pfName)
 
 def plotSfLaw(annuli, axIn=None, basename="sfLaw", filetype="png"):
     fig,ax=axisSwitch(axIn)
@@ -536,10 +561,10 @@ def plotVelocityDispersions(annuli, axIn=None, basename="dispersions", filetype=
     sigPhi = annuli.sigPhi 
     sigZ = annuli.sigZ 
     sigth = annuli.sigTh 
-    # Add in the thermal component to each direction
-    sigR = np.sqrt(np.power(sigR,2.0)+np.power(sigth,2.0))
-    sigPhi = np.sqrt(np.power(sigPhi,2.0)+np.power(sigth,2.0))
-    sigZ = np.sqrt(np.power(sigZ,2.0)+np.power(sigth,2.0))
+    # Add in the thermal component to each direction (HC: why?)
+    sigR = np.sqrt(np.power(sigR,2.0))#+np.power(sigth,2.0))
+    sigPhi = np.sqrt(np.power(sigPhi,2.0))#+np.power(sigth,2.0))
+    sigZ = np.sqrt(np.power(sigZ,2.0))#+np.power(sigth,2.0))
 
     sigStR = annuli.sigStR
     sigStPhi = annuli.sigStPhi 
@@ -627,18 +652,24 @@ def plotStability(annuli, axIn=None, basename="toomre", filetype="png",rlogscale
     QRW = annuli.QRW[1:] 
     Qgas = annuli.Qgas[1:] 
     Qst = annuli.Qst[1:] 
-    QWS = annuli.QWS[1:] 
+    QWS = annuli.QWS[1:]
+    QHC = annuli.QHC[1:]
+    QHC2 = annuli.QHC2[1:]
 
     #ax.scatter(r,QWS,color='b')
     #ax.plot(r,QWS,color='b',label=r'Wang-Silk')
-    #ax.scatter(r,QRW,color='k')
-    #ax.plot(r,QRW,color='k',label=r'Romeo-Wiegert')
+    ax.scatter(r,QRW,color='k')
+    ax.plot(r,QRW,color='k',label=r'Romeo-Wiegert')
     ax.scatter(r,Qgas,color='r')
-    ax.plot(r,Qgas,color='r',label=r'Gas')
+    ax.plot(r,Qgas,color='r',label=r'Gas $\frac{\sqrt{c_s^2+\sigma_R^2}\kappa}{\pi G \Sigma}$')
     ax.scatter(r,Qst,color='g')
     ax.plot(r,Qst,color='g',ls='--',label=r'Stars')
+    ax.scatter(r,QHC,color='m')
+    ax.plot(r,QHC,color='m',ls='--',label=r'Gas $\frac{c_s\Omega}{\pi G \Sigma}$')
+    #ax.scatter(r,QHC2,color='y')
+    #ax.plot(r,QHC2,color='y',ls='--',label=r'Gas $\frac{\sigma_R \kappa}{\pi G \Sigma}$')
     ax.plot(r,r*0+1.0,label=r'Approx Marginal Stability',color='b',ls='--')
-    ax.plot(r,r*0+2.0,label=r'Approx Marginal Stability w/ Finite Thickness',color='k',ls='--')
+    #ax.plot(r,r*0+2.0,label=r'Approx Marginal Stability w/ Finite Thickness',color='k',ls='--')
     ax.set_xlabel('r (kpc)')
     ax.set_ylabel('Q')
     ax.set_yscale('log')
@@ -667,6 +698,8 @@ def plotScaleheights(annuli, axIn=None, basename="scaleheights", filetype="png",
     fig,ax = axisSwitch(axIn)
     ax.plot(annuli.r, annuli.hGas, color='blue', label='gas')
     ax.scatter(annuli.r, annuli.hGas, color='blue')
+    #ax.plot(annuli.r, annuli.hGas2, color='pink', label=r'gas $\frac{\sigma_R^2}{\pi G \Sigma}$')
+    #ax.scatter(annuli.r, annuli.hGas2, color='pink')
     ax.plot(annuli.r, annuli.hStars, color='red', label='stars')
     ax.scatter(annuli.r, annuli.hStars, color='red')
 
@@ -748,7 +781,8 @@ plotFunctions = [plotStability, plotRotationCurve, plotBulkVelocity,
                  plotVelocityDispersions, plotSphericalMasses,
                  plotColumnDensities,  
                  plotScaleheights, plotNResolutionElements,
-                 plotMetallicity, plotStellarAges, plotDensityDistribution ]
+                 plotMetallicity, plotStellarAges, plotDensityDistribution,
+                 plotSf, plotSfGasLaw, plotSfLaw ]
 def showAllPlots(annuli):
     for fn in plotFunctions:
         fn(annuli,filetype='screen')
@@ -786,9 +820,9 @@ if __name__ == '__main__':
     # Look at vertical fluxes at the heights allocated above.
     #annuli = annularAnalysis(.03, 0.6, 20, 0.1, [.5,.5,.5],fluxHeights) # set up
     #annuli = annularAnalysis(1.2, 35., 20, 4., [.5,.5,.5],fluxHeights) # set up
-    #annuli = annularAnalysis(0.02, 3.2, 20, 0.1, bhpos,fluxHeights) # set up
-    annuli = annularAnalysis(0.05, 3.2, 20, 0.1, [.5,.5,.5],fluxHeights) # set up
-    rlogscale = False
+    #annuli = annularAnalysis(0.003, 35, 40, 4., bhpos,fluxHeights) # set up
+    annuli = annularAnalysis(0.05, 35., 10, 4, bhpos,fluxHeights) # set up
+    rlogscale = True
     annuli.run(pf,rlogscale=rlogscale) # actually run the analysis
 
     #plotStability(annuli,filetype='png',rlogscale=rlogscale)

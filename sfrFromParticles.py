@@ -14,7 +14,7 @@ def CenOstrikerKernel(x):
     ''' Here x is the current time minus the formation time normalized by the dynamical time'''
     # Enforce 0<=x<=10. x must be positive to avoid counting star formation from the future.
     # Meanwhile, x larger than 10 would yield very small values anyway, so we just set K(x)=0 in that case.
-    np.clip(x, 0.0, 10.0, out=x)
+    np.clip(x, 0.0, 12.0, out=x)
     return np.exp(-x)*x
 
 def sfrFromParticles(pf,data,theParticles,minDynamicalTime=0,times=None,kernel=CenOstrikerKernel, secondaryFilter=None):
@@ -74,12 +74,25 @@ def sfrFromParticles(pf,data,theParticles,minDynamicalTime=0,times=None,kernel=C
     times = np.array(times)
     times = np.sort(times)
     sfrs = np.zeros(np.shape(times))
-    mass = pf['StarMakerMinimumMass'] # May not be consistent with assumptions made in your simulation!
+    #mass = pf['StarMakerMinimumMass'] # May not be consistent with assumptions made in your simulation!
+    # HC: get initial masses
+    m_eject = 0.8
+    masses = (data['particle_mass'][theParticles][secondaryFilter]).to('Msun')
+    xv1 = np.array([((pf.current_time).in_units('yr') - creationTime[i])/dynamicalTime[i] for i in range(len(masses))])
+    initial_masses = np.array([masses[i]/(1.-m_eject*(1.-(1.+xv1[i])*np.exp(-xv1[i]))) for i in range(len(masses))])
+
     for i,t in enumerate(times):
         x = (t-creationTime)/adjustedDynamicalTime
         Kx = kernel(x)
-        sfrs[i] += np.sum(Kx*mass/adjustedDynamicalTime)
-    return times,sfrs
+        sfrs[i] += np.sum(Kx*initial_masses/adjustedDynamicalTime)
+
+    if len(times) == 1:
+        print('SFR at a given timestamp')
+        sfrs2 = [(np.sum(initial_masses)/currentTime).to('Msun/yr')]
+    else: # not supported yet
+        sfrs2 = [0]
+
+    return times,sfrs,sfrs2
 
 
 if __name__ == '__main__':
