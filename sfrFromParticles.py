@@ -7,6 +7,8 @@
 # Hyerin Cho
 
 from yt.mods import *
+from yt import units
+from yt import YTArray
 import matplotlib.pyplot as plt
 import pdb
 
@@ -61,7 +63,8 @@ def sfrFromParticles(pf,data,theParticles,minDynamicalTime=0,times=None,kernel=C
     # output, and the latter an optional keyword to this function. Note that (at least some) Enzo SF/feedback prescriptions
     # use a minimum dynamical time and this parameter is available in the pf, however we offer the user the freedom to 
     # use a different minimum here.
-    adjustedDynamicalTime = np.max(np.vstack([np.ones(np.shape(dynamicalTime))*minDynamicalTime, dynamicalTime]),0)
+    adjustedDynamicalTime = (np.max(np.vstack([np.ones(np.shape(dynamicalTime))*minDynamicalTime,\
+                         dynamicalTime]),0))*units.yr
     
     # If we haven't been given a list of times, pick three times near the creation of each particle.
     if times is None:
@@ -71,25 +74,28 @@ def sfrFromParticles(pf,data,theParticles,minDynamicalTime=0,times=None,kernel=C
             times.append(time)
             for k in range(npts):
                 times.append(time + adjustedDynamicalTime[i]*float(k+1)/npts)
-    times = np.array(times)
-    times = np.sort(times)
+    #times = np.array(times)
+    #times = np.sort(times)
     sfrs = np.zeros(np.shape(times))
     #mass = pf['StarMakerMinimumMass'] # May not be consistent with assumptions made in your simulation!
-    # HC: get initial masses
-    m_eject = 0.8
-    masses = (data['particle_mass'][theParticles][secondaryFilter]).to('Msun')
-    xv1 = np.array([((pf.current_time).in_units('yr') - creationTime[i])/dynamicalTime[i] for i in range(len(masses))])
-    initial_masses = np.array([masses[i]/(1.-m_eject*(1.-(1.+xv1[i])*np.exp(-xv1[i]))) for i in range(len(masses))])
+    if len(creationTime) > 1:
+        # HC: get initial masses
+        m_eject = 0.8
+        masses = (data['particle_mass'][theParticles][secondaryFilter]).to('Msun')
+        xv1 = np.array([((pf.current_time).in_units('yr') - creationTime[i])/dynamicalTime[i] for i in range(len(masses))])
+        initial_masses = YTArray([masses[i]/(1.-m_eject*(1.-(1.+xv1[i])*np.exp(-xv1[i]))) for i in range(len(masses))],'Msun')
 
-    for i,t in enumerate(times):
-        x = (t-creationTime)/adjustedDynamicalTime
-        Kx = kernel(x)
-        sfrs[i] += np.sum(Kx*initial_masses/adjustedDynamicalTime)
+        for i,t in enumerate(times):
+            x = ((t-creationTime)/adjustedDynamicalTime).to('')
+            Kx = kernel(x.d)
+            sfrs[i] += np.sum(Kx*initial_masses/adjustedDynamicalTime)
 
-    if len(times) == 1:
-        print('SFR at a given timestamp')
-        sfrs2 = [(np.sum(initial_masses)/currentTime).to('Msun/yr')]
-    else: # not supported yet
+        if len(times) == 1:
+            print('SFR at a given timestamp')
+            sfrs2 = [(np.sum(initial_masses)/currentTime).to('Msun/yr')]
+        else: # not supported yet
+            sfrs2 = [0]
+    else:
         sfrs2 = [0]
 
     return times,sfrs,sfrs2
